@@ -24,16 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@9831d1100e455b6fe36c07f4fc2674300bce31ac  # v4.0.0
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
         with:
           path: '.'
       
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6ab9016acba22e5b197fcb6794c0bced78da1f1  # v4.0.5
