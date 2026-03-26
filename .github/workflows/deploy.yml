@@ -2,7 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"]  # 如果你的默认分支是 master，改成 master
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 permissions:
@@ -21,17 +23,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+      
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v4
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # 如果你的 html 文件在根目录，用 '.'；如果在 docs 文件夹，改成 'docs'
+          path: '.'
+      
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-git add .github/workflows/deploy.yml
-git commit -m "添加 GitHub Pages 部署工作流"
-git push
