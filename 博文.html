@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>简易本地博客编辑器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", system-ui, -apple-system, sans-serif;
+        }
+        body {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+            background-color: #f7f7f7;
+        }
+
+        .publishing-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px #ddd;
+            margin-bottom: 30px;
+        }
+        .publishing-box h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+        #contentInput {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .upload-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .preview-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: zoom-in;
+        }
+        .preview-del {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,50,50,0.8);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 20px;
+            text-align: center;
+            z-index: 2;
+        }
+        .file-import-area {
+            margin: 12px 0;
+            padding: 10px;
+            border: 2px dashed #666;
+            text-align: center;
+            cursor: pointer;
+        }
+        .file-import-area.active {
+            background: #eef6ff;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .publishing-btn {
+            background-color: #2478ff;
+            color: white;
+        }
+        .export-btn {
+            background-color: #22aa66;
+            color: white;
+        }
+        .clear-all-btn {
+            background-color: #dd2222;
+            color: white;
+        }
+        .import-tip {
+            font-size: 13px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .blog-list-title {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        #blogList {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .blog-item {
+            background: #fff;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px #ddd;
+            cursor: grab;
+        }
+        .blog-item:active {
+            cursor: grabbing;
+        }
+        .blog-item.dragging {
+            opacity: 0.4;
+        }
+        .blog-time {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+        .blog-img-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .blog-img {
+            max-width: 140px;
+            max-height: 140px;
+            width: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: zoom-in;
+        }
+        .blog-text {
+            line-height: 1.7;
+            color: #444;
+            white-space: pre-line;
+        }
+        .blog-operate {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .edit-btn {
+            background: #ff9500;
+            color: white;
+        }
+        .del-btn {
+            background: #ff3b30;
+            color: white;
+        }
+
+        /* 编辑弹窗 */
+        .mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 999;
+        }
+        .edit-popup {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .edit-popup h4 {
+            margin-bottom: 10px;
+        }
+        .edit-popup textarea {
+            width: 100%;
+            height: 180px;
+            padding: 10px;
+            margin: 12px 0;
+            border: 1px solid #ccc;
+        }
+        .edit-btn-group {
+            margin-top:10px;
+            display:flex;
+            gap:10px;
+            flex-wrap: wrap;
+        }
+
+        /* 图片全屏放大弹窗 */
+        .img-view-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .img-view-mask.show {
+            display: flex;
+        }
+        .img-view-close {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            color: #fff;
+            font-size: 36px;
+            cursor: pointer;
+            z-index: 10000;
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            line-height: 40px;
+        }
+        .img-view-img {
+            max-width: 100%;
+            max-height: calc(100vh - 60px);
+            object-fit: contain;
+        }
+
+        /* 手机端媒体查询 */
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 0 12px;
+                margin: 15px auto;
+            }
+            .publishing-box {
+                padding: 14px;
+            }
+            .preview-item {
+                width: 80px;
+                height: 80px;
+            }
+            .blog-item {
+                padding: 14px;
+            }
+            .blog-img {
+                max-width: 100%;
+                max-height: 220px;
+            }
+            .btn {
+                padding: 7px 12px;
+                font-size: 13px;
+            }
+            .edit-popup {
+                padding: 15px;
+            }
+            .publishing-box h3, .blog-list-title {
+                font-size: 16px;
+            }
+            .img-view-close {
+                font-size: 30px;
+                top:10px;
+                right:12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 图片全屏放大弹窗 -->
+    <div class="img-view-mask" id="imgViewMask">
+        <div class="img-view-close" id="imgViewClose">×</div>
+        <img class="img-view-img" id="viewImg">
+    </div>
+
+    <!-- 发布区域 -->
+    <div class="publishing-box">
+        <h3>新建博文 / 导入静态博客网页</h3>
+        <textarea id="contentInput" placeholder="在这里输入博文内容...换行自动分段"></textarea>
+
+        <div class="upload-row">
+            <input type="file" id="imgUpload" accept="image/*" multiple>
+        </div>
+        <div class="preview-wrap" id="mainPreviewWrap"></div>
+
+        <div class="file-import-area" id="importBox">
+            <p>将导出的静态博客.html文件拖拽到此，或点击选择文件</p>
+            <input type="file" id="htmlFileInput" accept=".html" hidden>
+        </div>
+        <p class="import-tip">导入后会读取网页内所有博文，合并到当前编辑器列表</p>
+
+        <div class="btn-group">
+            <button class="btn publishing-btn" id="publishBtn">发布博文</button>
+            <button class="btn export-btn" id="exportBtn">导出只读静态网页</button>
+            <button class="btn clear-all-btn" id="clearAllBtn">一键清除所有博文</button>
+        </div>
+    </div>
+
+    <h3 class="blog-list-title">全部博文（拖动卡片调整顺序）</h3>
+    <div id="blogList"></div>
+
+    <!-- 编辑弹窗 -->
+    <div class="mask" id="editMask">
+        <div class="edit-popup">
+            <h4>编辑博文</h4>
+            <textarea id="editInput" placeholder="修改博文内容"></textarea>
+            <input type="file" id="editImgUpload" accept="image/*" multiple>
+            <div class="preview-wrap" id="editPreviewWrap"></div>
+            <div class="edit-btn-group">
+                <button class="btn publishing-btn" id="saveEditBtn">保存修改</button>
+                <button class="btn del-btn" id="closeEditBtn">取消</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 全局变量
+let blogList = JSON.parse(localStorage.getItem("blogData")) || [];
+let editCurrentId = null;
+let dragStartIndex = null;
+let isLoadingImg = false;
+
+const contentInput = document.getElementById("contentInput");
+const imgUpload = document.getElementById("imgUpload");
+const mainPreviewWrap = document.getElementById("mainPreviewWrap");
+const publishBtn = document.getElementById("publishBtn");
+const exportBtn = document.getElementById("exportBtn");
+const clearAllBtn = document.getElementById("clearAllBtn");
+const blogListDom = document.getElementById("blogList");
+const editMask = document.getElementById("editMask");
+const editInput = document.getElementById("editInput");
+const editImgUpload = document.getElementById("editImgUpload");
+const editPreviewWrap = document.getElementById("editPreviewWrap");
+const saveEditBtn = document.getElementById("saveEditBtn");
+const closeEditBtn = document.getElementById("closeEditBtn");
+const importBox = document.getElementById("importBox");
+const htmlFileInput = document.getElementById("htmlFileInput");
+
+// 图片放大弹窗元素
+const imgViewMask = document.getElementById("imgViewMask");
+const viewImg = document.getElementById("viewImg");
+const imgViewClose = document.getElementById("imgViewClose");
+
+let tempImgList = [];
+let editImgList = [];
+
+// 图片放大关闭逻辑
+function openImgViewer(src) {
+    viewImg.src = src;
+    imgViewMask.classList.add("show");
+}
+function closeImgViewer() {
+    imgViewMask.classList.remove("show");
+}
+imgViewClose.addEventListener("click", closeImgViewer);
+imgViewMask.addEventListener("click", function(e){
+    if(e.target === imgViewMask) closeImgViewer();
+});
+document.addEventListener("keydown", e=>{
+    if(e.key === "Escape") closeImgViewer();
+});
+
+// 图片压缩工具
+function compressImage(file, maxWidth = 1200, quality = 0.7) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = e => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let w = img.width;
+                let h = img.height;
+                if (w > maxWidth) {
+                    h = (maxWidth / w) * h;
+                    w = maxWidth;
+                }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, w, h);
+                const base64 = canvas.toDataURL("image/jpeg", quality);
+                resolve(base64);
+            }
+        }
+    })
+}
+
+// 批量读取图片
+async function readImageFiles(files) {
+    const promiseList = [];
+    for (let i = 0; i < files.length; i++) {
+        promiseList.push(compressImage(files[i]));
+    }
+    return await Promise.all(promiseList);
+}
+
+// 新建上传图片
+imgUpload.addEventListener("change", async function(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    isLoadingImg = true;
+    publishBtn.disabled = true;
+    tempImgList = await readImageFiles(files);
+    renderMainPreview();
+    isLoadingImg = false;
+    publishBtn.disabled = false;
+});
+
+// 渲染上传预览
+function renderMainPreview(){
+    mainPreviewWrap.innerHTML = "";
+    tempImgList.forEach((src, idx) => {
+        const div = document.createElement("div");
+        div.className = "preview-item";
+        div.innerHTML = `<img src="${src}" data-src="${src}"><button class="preview-del" data-idx="${idx}">×</button>`;
+        mainPreviewWrap.appendChild(div);
+    })
+    document.querySelectorAll(".preview-del").forEach(btn=>{
+        btn.onclick = function(){
+            const i = Number(this.dataset.idx);
+            tempImgList.splice(i,1);
+            renderMainPreview();
+        }
+    })
+    document.querySelectorAll("#mainPreviewWrap img").forEach(img=>{
+        img.onclick = function(){ openImgViewer(this.dataset.src); }
+    })
+}
+
+// 编辑弹窗图片
+editImgUpload.addEventListener("change", async function(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    editImgList = await readImageFiles(files);
+    renderEditPreview();
+});
+function renderEditPreview(){
+    editPreviewWrap.innerHTML = "";
+    editImgList.forEach((src, idx) => {
+        const div = document.createElement("div");
+        div.className = "preview-item";
+        div.innerHTML = `<img src="${src}" data-src="${src}"><button class="preview-del" data-idx="${idx}">×</button>`;
+        editPreviewWrap.appendChild(div);
+    })
+    document.querySelectorAll(".preview-del").forEach(btn=>{
+        btn.onclick = function(){
+            const i = Number(this.dataset.idx);
+            editImgList.splice(i,1);
+            renderEditPreview();
+        }
+    })
+    document.querySelectorAll("#editPreviewWrap img").forEach(img=>{
+        img.onclick = function(){ openImgViewer(this.dataset.src); }
+    })
+}
+
+// 一键清空
+clearAllBtn.addEventListener("click", function(){
+    if(confirm("确定清空所有博文？不可恢复！")){
+        blogList = [];
+        saveBlogToLocal();
+        renderBlogList();
+        alert("已清空全部博文");
+    }
+});
+
+// 发布博文
+publishBtn.addEventListener("click", async function() {
+    const text = contentInput.value.trim();
+    if(!text) { alert("博文内容不能为空！"); return; }
+    if(isLoadingImg) { alert("图片处理中，请稍候发布！"); return; }
+    try {
+        blogList.unshift({
+            id: Date.now(),
+            text: text,
+            imgs: [...tempImgList],
+            time: new Date().toLocaleString()
+        });
+        saveBlogToLocal();
+        renderBlogList();
+        contentInput.value = "";
+        imgUpload.value = "";
+        tempImgList = [];
+        renderMainPreview();
+    } catch (err) {
+        alert("发布失败：图片体积过大，减少图片再试");
+        console.error(err);
+    }
+});
+
+// 本地存储
+function saveBlogToLocal() {
+    localStorage.setItem("blogData", JSON.stringify(blogList));
+}
+
+// 渲染博文列表
+function renderBlogList() {
+    blogListDom.innerHTML = "";
+    blogList.forEach((blog, index) => {
+        // 兼容旧单图数据
+        if(blog.img && (!blog.imgs || blog.imgs.length === 0)) {
+            blog.imgs = [blog.img];
+            delete blog.img;
+        }
+        let imgHtml = "";
+        if(blog.imgs && blog.imgs.length > 0){
+            imgHtml += `<div class="blog-img-wrap">`;
+            blog.imgs.forEach(src=>{
+                imgHtml += `<img class="blog-img" src="${src}" data-src="${src}">`;
+            })
+            imgHtml += `</div>`;
+        }
+        const item = document.createElement("div");
+        item.className = "blog-item";
+        item.dataset.index = index;
+        item.innerHTML = `
+            <div class="blog-time">发布时间：${blog.time}</div>
+            <div class="blog-text">${blog.text}</div>
+            ${imgHtml}
+            <div class="blog-operate">
+                <button class="btn edit-btn" data-id="${blog.id}">编辑</button>
+                <button class="btn del-btn" data-id="${blog.id}">删除</button>
+            </div>
+        `;
+        blogListDom.appendChild(item);
+    });
+    bindDragSort();
+    bindOperateBtn();
+    // 博文图片点击放大
+    document.querySelectorAll(".blog-img").forEach(img=>{
+        img.onclick = function(){ openImgViewer(this.dataset.src); }
+    })
+}
+
+// 拖拽排序
+function bindDragSort() {
+    const listWrap = blogListDom;
+    const items = listWrap.querySelectorAll(".blog-item");
+    dragStartIndex = null;
+    listWrap.ondragover = (e) => e.preventDefault();
+    listWrap.ondrop = function(e) {
+        e.preventDefault();
+        if(dragStartIndex === null) return;
+        const targetItem = document.elementFromPoint(e.clientX, e.clientY).closest(".blog-item");
+        if(!targetItem) return;
+        const dropIndex = Number(targetItem.dataset.index);
+        if(dragStartIndex === dropIndex) return;
+        const temp = blogList[dragStartIndex];
+        blogList.splice(dragStartIndex, 1);
+        blogList.splice(dropIndex, 0, temp);
+        saveBlogToLocal();
+        renderBlogList();
+    }
+    items.forEach(item => {
+        item.draggable = true;
+        item.addEventListener("dragstart", e => {
+            dragStartIndex = Number(item.dataset.index);
+            item.classList.add("dragging");
+            e.dataTransfer.setData("text", dragStartIndex);
+        })
+        item.addEventListener("dragend", () => {
+            items.forEach(el => el.classList.remove("dragging"));
+            dragStartIndex = null;
+        })
+    })
+}
+
+// 编辑删除按钮
+function bindOperateBtn() {
+    document.querySelectorAll(".del-btn").forEach(btn => {
+        btn.onclick = function() {
+            const delId = Number(this.dataset.id);
+            blogList = blogList.filter(item => item.id !== delId);
+            saveBlogToLocal();
+            renderBlogList();
+        }
+    })
+    document.querySelectorAll(".edit-btn").forEach(btn => {
+        btn.onclick = function() {
+            editCurrentId = Number(this.dataset.id);
+            const targetBlog = blogList.find(item => item.id === editCurrentId);
+            editInput.value = targetBlog.text;
+            editImgList = targetBlog.imgs ? [...targetBlog.imgs] : [];
+            renderEditPreview();
+            editMask.style.display = "flex";
+        }
+    })
+}
+
+// 关闭编辑弹窗
+closeEditBtn.addEventListener("click", () => {
+    editMask.style.display = "none";
+    editInput.value = "";
+    editImgUpload.value = "";
+    editImgList = [];
+    renderEditPreview();
+    editCurrentId = null;
+})
+
+// 保存编辑
+saveEditBtn.addEventListener("click", async () => {
+    const newText = editInput.value.trim();
+    if(!newText) { alert("博文内容不能为空！"); return; }
+    try {
+        const targetBlog = blogList.find(item => item.id === editCurrentId);
+        targetBlog.text = newText;
+        targetBlog.imgs = [...editImgList];
+        saveBlogToLocal();
+        renderBlogList();
+        editMask.style.display = "none";
+    } catch(err) {
+        alert("保存失败，图片体积过大！");
+        console.error(err);
+    }
+})
+
+// 导入HTML文件
+importBox.addEventListener("click", ()=> htmlFileInput.click());
+importBox.addEventListener("dragover", e=>{ e.preventDefault(); importBox.classList.add("active"); });
+importBox.addEventListener("dragleave", ()=> importBox.classList.remove("active"));
+importBox.addEventListener("drop", e=>{
+    e.preventDefault();
+    importBox.classList.remove("active");
+    const file = e.dataTransfer.files[0];
+    if(file.name.endsWith(".html")) readStaticHtmlFile(file);
+    else alert("请选择.html静态博客文件");
+})
+htmlFileInput.addEventListener("change", e=>{
+    const file = e.target.files[0];
+    if(file) readStaticHtmlFile(file);
+})
+function readStaticHtmlFile(file){
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const htmlText = e.target.result;
+        const tempDom = document.createElement("div");
+        tempDom.innerHTML = htmlText;
+        const blogItems = tempDom.querySelectorAll(".blog-item");
+        if(blogItems.length === 0){
+            alert("未识别博客内容，请使用本工具导出的文件");
+            return;
+        }
+        blogItems.forEach(item=>{
+            const timeText = item.querySelector(".blog-time")?.innerText || "导入博文";
+            const text = item.querySelector(".blog-text")?.innerText || "";
+            const imgArr = [];
+            item.querySelectorAll(".blog-img").forEach(img=> imgArr.push(img.src));
+            blogList.push({
+                id: Date.now() + Math.floor(Math.random()*1000),
+                text: text,
+                imgs: imgArr,
+                time: timeText + "（导入）"
+            });
+        })
+        saveBlogToLocal();
+        renderBlogList();
+        alert(`成功导入${blogItems.length}篇博文`);
+    }
+    reader.readAsText(file);
+}
+
+// 导出静态网页（修复乱码问题，拆分模板）
+exportBtn.addEventListener("click", function() {
+    let htmlHead = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>静态博客页面</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",sans-serif;}
+body{max-width:900px;margin:30px auto;padding:0 12px;background:#f7f7f7;}
+.blog-item{background:#fff;padding:18px;border-radius:8px;box-shadow:0 1px 4px #ddd;margin-bottom:20px;}
+.blog-time{font-size:12px;color:#999;margin-bottom:10px;}
+.blog-img-wrap{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+.blog-img{max-width:140px;max-height:140px;width:100%;object-fit:cover;border-radius:4px;cursor:zoom-in;}
+.blog-text{line-height:1.7;color:#444;white-space:pre-line;}
+h3{margin-bottom:20px;color:#333;}
+@media(max-width:600px){body{padding:0 12px;}.blog-img{max-width:100%;max-height:220px;}}
+.img-view-mask{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;}
+.img-view-mask.show{display:flex;}
+.img-view-close{position:fixed;top:10px;right:15px;color:#fff;font-size:32px;cursor:pointer;}
+.img-view-img{max-width:100%;max-height:calc(100vh - 50px);}
+</style>
+</head>
+<body>
+<h3>博客合集</h3>
+<div class="img-view-mask" id="imgViewMask">
+    <div class="img-view-close" onclick="document.getElementById('imgViewMask').classList.remove('show')">×</div>
+    <img class="img-view-img" id="viewImg">
+</div>
+<script>
+function openImg(src){
+    document.getElementById('viewImg').src=src;
+    document.getElementById('imgViewMask').classList.add('show');
+}
+document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('.blog-img').forEach(i=>i.onclick=()=>openImg(i.src));
+})
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape') document.getElementById('imgViewMask').classList.remove('show');
+})
+<\/script>`;
+
+    let htmlBody = "";
+    blogList.forEach(blog => {
+        let imgHtml = "";
+        if(blog.imgs && blog.imgs.length > 0){
+            imgHtml += `<div class="blog-img-wrap">`;
+            blog.imgs.forEach(src=>{
+                imgHtml += `<img class="blog-img" src="${src}">`;
+            })
+            imgHtml += `</div>`;
+        }
+        htmlBody += `
+<div class="blog-item">
+    <div class="blog-time">发布时间：${blog.time}</div>
+    <div class="blog-text">${blog.text}</div>
+    ${imgHtml}
+</div>`;
+    })
+    let htmlEnd = `</body></html>`;
+    const fullHtml = htmlHead + htmlBody + htmlEnd;
+    const blob = new Blob([fullHtml], {type: "text/html;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "静态博客页面.html";
+    a.click();
+    URL.revokeObjectURL(a.href);
+})
+
+// 初始化渲染
+window.onload = function() {
+    renderBlogList();
+}
+</script>
+</body>
+</html>
